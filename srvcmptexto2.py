@@ -3,11 +3,14 @@
 import socket
 #import mysql.connector
 import pymysql
+import nltk  # Adicionar a importação principal
+nltk.download('averaged_perceptron_tagger')
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk import download
 from nltk.corpus import wordnet
 from nltk.tokenize.treebank import TreebankWordDetokenizer
+
 from collections import Counter
 import math
 
@@ -15,6 +18,8 @@ import math
 download('punkt')
 download('stopwords')
 download('wordnet')
+download('averaged_perceptron_tagger')  # Adiciona o download do perceptron tagger
+
 
 # Definindo variáveis globais
 PORT = 8098
@@ -64,7 +69,7 @@ def find_most_similar_text(client_text):
         password='226468',
         database='doctordb'
     )
-    cursor = conn.cursor()
+    cursor = conn.cursor()  
     
     # Executa uma consulta para obter todos os textos da tabela logouve
     cursor.execute("SELECT id, texto FROM logouve WHERE not idComando is null")
@@ -98,17 +103,20 @@ def find_most_similar_text(client_text):
     return most_similar_id
 
 def handle_client(client_socket):
-    while True:
-        # Recebe o texto do cliente
-        data = client_socket.recv(1024).decode('utf-8')
-        print(f"Recebido: {data}")
+    try:
+        while True:
+            data = client_socket.recv(1024).decode('utf-8')
+            if not data:
+                break
+            print(f"Recebido: {data}")
 
-        # Encontra o id com maior similaridade
-        result_id = find_most_similar_text(data)
-        
-        # Envia o id de volta ao cliente, ou -1 se não houver similaridade suficiente
-        response = str(result_id) if result_id != -1 else '-1'
-        client_socket.send(response.encode('utf-8'))
+            result_id = find_most_similar_text(data)
+            response = str(result_id) if result_id != -1 else '-1'
+            client_socket.send(response.encode('utf-8'))
+    except Exception as e:
+        print(f"Erro ao lidar com cliente: {e}")
+    finally:
+        client_socket.close()
 
 def main():
     # Cria um socket TCP/IP
